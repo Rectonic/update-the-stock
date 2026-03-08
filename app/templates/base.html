@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title or 'Синхронизация Woo' }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <h1>Синхронизация остатков и цен WooCommerce</h1>
+      <nav>
+        <a href="/">Загрузка</a>
+        <a href="/history">История задач</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

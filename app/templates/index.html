@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Загрузить официальный Excel</h2>
+  <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+    <input type="file" name="file" accept=".xlsx" required />
+    <button type="submit">Загрузить</button>
+  </form>
+  <p>Ожидаемая структура после определения заголовка: A=SKU, C=Количество, D=Цена.</p>
+</section>
+
+<section class="grid-2">
+  <section class="card">
+    <h2>Последние загрузки</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Когда (UTC)</th>
+          <th>Файл</th>
+          <th>Уникальных SKU</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for upload in uploads %}
+        <tr>
+          <td>{{ upload.created_at }}</td>
+          <td>{{ upload.filename }}</td>
+          <td>{{ upload.stats.unique_skus }}</td>
+          <td><a href="/uploads/{{ upload.upload_id }}">Открыть</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">Пока нет загрузок.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Последние запуски</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Когда (UTC)</th>
+          <th>Статус</th>
+          <th>Загрузка</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for run in runs %}
+        <tr>
+          <td>{{ run.created_at }}</td>
+          <td><span class="status status-{{ run.status }}">{{ {"queued":"в очереди","running":"выполняется","completed":"завершено","failed":"ошибка"}.get(run.status, run.status) }}</span></td>
+          <td>{{ run.upload_id }}</td>
+          <td><a href="/runs/{{ run.id }}">Открыть</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">Пока нет запусков.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>История запусков</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID запуска</th>
+        <th>Статус</th>
+        <th>Загрузка</th>
+        <th>Создано</th>
+        <th>Завершено</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td><a href="/runs/{{ run.id }}">{{ run.id }}</a></td>
+        <td><span class="status status-{{ run.status }}">{{ {"queued":"в очереди","running":"выполняется","completed":"завершено","failed":"ошибка"}.get(run.status, run.status) }}</span></td>
+        <td><a href="/uploads/{{ run.upload_id }}">{{ run.upload_id }}</a></td>
+        <td>{{ run.created_at }}</td>
+        <td>{{ run.finished_at or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Пока нет запусков.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Загрузки</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID загрузки</th>
+        <th>Файл</th>
+        <th>Создано</th>
+        <th>Уникальных SKU</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for upload in uploads %}
+      <tr>
+        <td><a href="/uploads/{{ upload.upload_id }}">{{ upload.upload_id }}</a></td>
+        <td>{{ upload.filename }}</td>
+        <td>{{ upload.created_at }}</td>
+        <td>{{ upload.stats.unique_skus }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Пока нет загрузок.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

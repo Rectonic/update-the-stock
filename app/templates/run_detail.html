@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+{% set status_labels = {"queued":"в очереди","running":"выполняется","completed":"завершено","failed":"ошибка"} %}
+{% set metric_labels = {
+  "parsed_rows":"Распознано строк",
+  "duplicate_sku_keys":"Дубли SKU (ключи)",
+  "catalog_skus":"SKU в каталоге Woo",
+  "catalog_duplicate_skus":"Дубли SKU в Woo",
+  "matched_products":"Совпавших товаров",
+  "updated_stock_count":"Обновлено остатков",
+  "updated_price_count":"Обновлено цен",
+  "absent_set_to_zero_count":"Отсутствующих SKU -> 0",
+  "missing_in_wp_count":"SKU не найдено в Woo",
+  "failures":"Ошибок"
+} %}
+<section class="card">
+  <h2>Запуск {{ run.id }}</h2>
+  <p><strong>Статус:</strong> <span class="status status-{{ run.status }}">{{ status_labels.get(run.status, run.status) }}</span></p>
+  <p><strong>Загрузка:</strong> <a href="/uploads/{{ run.upload_id }}">{{ run.upload_id }}</a></p>
+  <p><strong>Создано:</strong> {{ run.created_at }}</p>
+  <p><strong>Начато:</strong> {{ run.started_at or '-' }}</p>
+  <p><strong>Завершено:</strong> {{ run.finished_at or '-' }}</p>
+
+  {% if run.audit_csv %}
+  <p><a href="/runs/{{ run.id }}/audit.csv">Скачать аудит CSV</a></p>
+  {% endif %}
+
+  {% if run.status in ['queued', 'running'] %}
+  <script>
+    setTimeout(function() {
+      window.location.reload();
+    }, 3000);
+  </script>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Метрики</h2>
+  <table>
+    <tbody>
+      {% for key, value in run.metrics.items() %}
+      <tr><th>{{ metric_labels.get(key, key) }}</th><td>{{ value }}</td></tr>
+      {% else %}
+      <tr><td colspan="2">Метрики пока отсутствуют.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Ошибки</h2>
+  <ul>
+    {% for err in run.errors %}
+    <li>{{ err }}</li>
+    {% else %}
+    <li>Ошибок нет.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Логи</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Время</th>
+        <th>Сообщение</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in run.logs %}
+      <tr>
+        <td>{{ line.ts }}</td>
+        <td>{{ line.message }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2">Логов пока нет.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Загрузка {{ upload.upload_id }}</h2>
+  <p><strong>Файл:</strong> {{ upload.filename }}</p>
+  <p><strong>Создано:</strong> {{ upload.created_at }} UTC</p>
+
+  <div class="stats">
+    <div><label>Всего строк:</label> {{ upload.stats.total_rows }}</div>
+    <div><label>Строк данных:</label> {{ upload.stats.data_rows }}</div>
+    <div><label>Уникальных SKU:</label> {{ upload.stats.unique_skus }}</div>
+    <div><label>Дубли SKU:</label> {{ upload.stats.duplicate_sku_keys }}</div>
+    <div><label>Некорректных цен:</label> {{ upload.stats.invalid_price_rows }}</div>
+    <div><label>Пустых SKU:</label> {{ upload.stats.skipped_empty_sku }}</div>
+  </div>
+
+  <form action="/runs/{{ upload.upload_id }}/start" method="post">
+    <button type="submit">Запустить синхронизацию с WooCommerce</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Предпросмотр (первые {{ upload.preview|length }} SKU)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Кол-во</th>
+        <th>Наличие</th>
+        <th>Цена</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in upload.preview %}
+      <tr>
+        <td>{{ row.sku }}</td>
+        <td>{{ row.quantity }}</td>
+        <td>{{ row.availability }}</td>
+        <td>{{ row.price or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Нет распознанных позиций.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Связанные запуски</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Запуск</th>
+        <th>Статус</th>
+        <th>Создано</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in related_runs %}
+      <tr>
+        <td><a href="/runs/{{ run.id }}">{{ run.id }}</a></td>
+        <td><span class="status status-{{ run.status }}">{{ {"queued":"в очереди","running":"выполняется","completed":"завершено","failed":"ошибка"}.get(run.status, run.status) }}</span></td>
+        <td>{{ run.created_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">Пока нет запусков.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

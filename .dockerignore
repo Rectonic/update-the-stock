@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+.DS_Store
+.venv/
+venv/
+data/
+stock_official/
+stock_site/
