@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import requests
 
@@ -26,16 +26,22 @@ class WooCommerceClient:
         consumer_key: str,
         consumer_secret: str,
         timeout_seconds: int = 30,
+        logger: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.timeout_seconds = timeout_seconds
+        self.logger = logger
 
         if not self.base_url:
             raise WooAPIError("WC_BASE_URL is not configured")
         if not self.consumer_key or not self.consumer_secret:
             raise WooAPIError("WooCommerce API credentials are not configured")
+
+    def _log(self, message: str) -> None:
+        if self.logger:
+            self.logger(message)
 
     def _request(
         self,
@@ -71,10 +77,12 @@ class WooCommerceClient:
         page = 1
         per_page = 100
         out: List[dict] = []
+        self._log(f"Fetching {path} from WooCommerce")
 
         while True:
             paged_params = dict(base_params)
             paged_params.update({"per_page": per_page, "page": page})
+            self._log(f"Requesting {path} page {page}")
             payload, _headers = self._request("GET", path, params=paged_params)
             if not isinstance(payload, list):
                 raise WooAPIError(f"Expected list response while paging {path}")
@@ -86,6 +94,7 @@ class WooCommerceClient:
                 break
             page += 1
 
+        self._log(f"Finished fetching {path}: {len(out)} rows")
         return out
 
     def _fetch_all_simple_products(self) -> List[dict]:
@@ -115,6 +124,7 @@ class WooCommerceClient:
         by_sku: Dict[str, ProductRef] = {}
         duplicates: List[str] = []
 
+        self._log("Loading simple products catalog")
         for product in self._fetch_all_simple_products():
             sku = str(product.get("sku", "")).strip()
             if not sku:
@@ -131,6 +141,7 @@ class WooCommerceClient:
                 continue
             by_sku[sku] = ref
 
+        self._log("Loading variations catalog")
         for variation in self._fetch_all_variations():
             sku = str(variation.get("sku", "")).strip()
             if not sku:
@@ -147,6 +158,9 @@ class WooCommerceClient:
                 continue
             by_sku[sku] = ref
 
+        self._log(
+            f"Catalog fetch complete: {len(by_sku)} unique SKUs, {len(sorted(set(duplicates)))} duplicates"
+        )
         return by_sku, sorted(set(duplicates))
 
     def update_item(self, ref: ProductRef, stock_quantity: int, regular_price: Optional[str]) -> None:

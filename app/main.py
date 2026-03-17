@@ -49,6 +49,14 @@ security = HTTPBasic()
 @app.on_event("startup")
 def on_startup() -> None:
     storage.ensure_dirs()
+    recovered = storage.fail_incomplete_runs(
+        "Run was interrupted because the app restarted or the worker stopped."
+    )
+    if recovered:
+        print(
+            f"Recovered {recovered} incomplete run(s) and marked them as failed on startup.",
+            flush=True,
+        )
 
 
 def require_auth(
@@ -116,6 +124,7 @@ def _start_run_task(run_id: str, upload_id: str) -> None:
             consumer_key=settings.wc_consumer_key,
             consumer_secret=settings.wc_consumer_secret,
             timeout_seconds=settings.request_timeout_seconds,
+            logger=lambda msg: storage.append_log(run_id, msg),
         )
         storage.append_log(run_id, "WooCommerce client initialized")
 

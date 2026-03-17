@@ -63,7 +63,10 @@ def sync_to_woocommerce(
             continue
         normalized_input[str(sku)] = payload
 
-    for sku, payload in normalized_input.items():
+    total_input = len(normalized_input)
+    log(f"Starting update for {total_input} uploaded SKUs")
+
+    for index, (sku, payload) in enumerate(normalized_input.items(), start=1):
         quantity = float(payload.get("quantity", 0.0))
         stock_quantity = _to_stock_quantity(quantity)
         price = payload.get("price")
@@ -125,10 +128,20 @@ def sync_to_woocommerce(
                 }
             )
 
+        if index == 1 or index % 100 == 0 or index == total_input:
+            log(f"Processed uploaded SKUs: {index}/{total_input}")
+
+    absent_candidates = len(by_sku) - len(normalized_input)
+    if absent_candidates > 0:
+        log(f"Setting stock to 0 for up to {absent_candidates} WooCommerce SKUs missing from upload")
+
+    absent_processed = 0
+    total_catalog = len(by_sku)
     for sku, ref in by_sku.items():
         if sku in normalized_input:
             continue
 
+        absent_processed += 1
         try:
             client.update_item(ref, stock_quantity=0, regular_price=None)
             metrics["absent_set_to_zero_count"] += 1
@@ -161,6 +174,12 @@ def sync_to_woocommerce(
                     "wp_id": str(ref.product_id),
                     "wp_parent_id": str(ref.parent_id or ""),
                 }
+            )
+
+        if absent_processed == 1 or absent_processed % 100 == 0 or absent_processed == absent_candidates:
+            log(
+                f"Processed missing WooCommerce SKUs: {absent_processed}/{max(absent_candidates, 0)} "
+                f"(catalog size {total_catalog})"
             )
 
     return SyncReport(metrics=metrics, errors=errors, audit_rows=audit_rows)

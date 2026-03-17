@@ -104,6 +104,7 @@ class Storage:
             return run
 
     def append_log(self, run_id: str, message: str) -> None:
+        print(f"[run {run_id}] {message}", flush=True)
         with self._lock:
             run = self.load_run(run_id)
             logs = run.get("logs", [])
@@ -113,6 +114,40 @@ class Storage:
             run["logs"] = logs
             with self.run_path(run_id).open("w", encoding="utf-8") as fh:
                 json.dump(run, fh, ensure_ascii=False, indent=2, sort_keys=True)
+
+    def fail_incomplete_runs(self, reason: str) -> int:
+        updated = 0
+        with self._lock:
+            for path in sorted(self.settings.runs_dir.glob("*.json")):
+                try:
+                    with path.open("r", encoding="utf-8") as fh:
+                        run = json.load(fh)
+                except Exception:
+                    continue
+
+                status = str(run.get("status", ""))
+                if status not in {"queued", "running"}:
+                    continue
+
+                logs = run.get("logs", [])
+                if not isinstance(logs, list):
+                    logs = []
+                logs.append({"ts": utc_now_iso(), "message": reason})
+                run["logs"] = logs
+
+                errors = run.get("errors", [])
+                if not isinstance(errors, list):
+                    errors = []
+                errors.append(reason)
+                run["errors"] = errors
+
+                run["status"] = "failed"
+                run["finished_at"] = utc_now_iso()
+
+                with path.open("w", encoding="utf-8") as fh:
+                    json.dump(run, fh, ensure_ascii=False, indent=2, sort_keys=True)
+                updated += 1
+        return updated
 
     def list_runs(self) -> List[Dict[str, object]]:
         out: List[Dict[str, object]] = []
